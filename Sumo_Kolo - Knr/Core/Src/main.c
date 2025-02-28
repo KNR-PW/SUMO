@@ -23,7 +23,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RIGTH_MOTOR 1
+#define LEFT_MOTOR 2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -71,11 +72,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 			{
-			case 1:
+			case RIGTH_MOTOR:
 				HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
 				break;
-			case 2:
+			case LEFT_MOTOR:
 				HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
 				break;
@@ -86,11 +87,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 					{
-					case 1:
+					case RIGTH_MOTOR:
 						HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
 						break;
-					case 2:
+					case LEFT_MOTOR:
 						HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
 						break;
@@ -105,10 +106,10 @@ void move_at_speed(int speed,int motor_id)
 {
 	switch(motor_id)
 		{
-		case 1:
+		case RIGTH_MOTOR:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, speed);
 			break;
-		case 2:
+		case LEFT_MOTOR:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, speed);
 			break;
 		}
