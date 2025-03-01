@@ -49,7 +49,7 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-bool direction = true;
+bool clockWisedirection = true;
 //to wiadomo chyba co robi
 void enable_motor(int motor_id)
 {
@@ -166,9 +166,9 @@ int main(void)
 	  if (HAL_GPIO_ReadPin(BLUE_BUTTON_GPIO_Port, BLUE_BUTTON_Pin) == GPIO_PIN_RESET&&HAL_GetTick()>(timer+5000))
 	  {
 
-		  	  int prev_direction=direction;
-			  direction=change_direction(prev_direction,1);
-			  direction=change_direction(prev_direction,2);
+		  	  int prev_direction=clockWisedirection;
+		  	  clockWisedirection=change_direction(prev_direction,1);
+		  	  clockWisedirection=change_direction(prev_direction,2);
 			  timer=HAL_GetTick();
 	  }
     /* USER CODE END WHILE */
