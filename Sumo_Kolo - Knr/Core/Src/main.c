@@ -55,10 +55,10 @@ void enable_motor(int motor_id)
 {
 	switch(motor_id)
 	{
-	case 1:
+	case RIGTH_MOTOR:
 		HAL_GPIO_WritePin(EN_Motor_1_GPIO_Port, EN_Motor_1_Pin,SET);
 		break;
-	case 2:
+	case LEFT_MOTOR:
 		HAL_GPIO_WritePin(EN_Motor_2_GPIO_Port, EN_Motor_2_Pin,SET);
 		break;
 	}
