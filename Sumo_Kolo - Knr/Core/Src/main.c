@@ -166,7 +166,7 @@ int main(void)
 	  if (HAL_GPIO_ReadPin(BLUE_BUTTON_GPIO_Port, BLUE_BUTTON_Pin) == GPIO_PIN_RESET&&HAL_GetTick()>(timer+5000))
 	  {
 
-		  	  int prev_direction=direction;
+		  	  bool prev_direction=direction;
 			  direction=change_direction(prev_direction,1);
 			  direction=change_direction(prev_direction,2);
 			  timer=HAL_GetTick();
