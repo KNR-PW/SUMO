@@ -55,10 +55,10 @@ void enable_motor(int motor_id)
 {
 	switch(motor_id)
 	{
-	case 1:
+	case RIGTH_MOTOR:
 		HAL_GPIO_WritePin(EN_Motor_1_GPIO_Port, EN_Motor_1_Pin,SET);
 		break;
-	case 2:
+	case LEFT_MOTOR:
 		HAL_GPIO_WritePin(EN_Motor_2_GPIO_Port, EN_Motor_2_Pin,SET);
 		break;
 	}
@@ -166,7 +166,7 @@ int main(void)
 	  if (HAL_GPIO_ReadPin(BLUE_BUTTON_GPIO_Port, BLUE_BUTTON_Pin) == GPIO_PIN_RESET&&HAL_GetTick()>(timer+5000))
 	  {
 
-		  	  int prev_direction=clockWisedirection;
+		  	  bool prev_direction=direction;
 		  	  clockWisedirection=change_direction(prev_direction,1);
 		  	  clockWisedirection=change_direction(prev_direction,2);
 			  timer=HAL_GetTick();
