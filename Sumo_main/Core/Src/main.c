@@ -36,8 +36,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define RIGTH_MOTOR 2
-#define LEFT_MOTOR 1
+#define RIGTH_MOTOR 1
+#define LEFT_MOTOR 2
+
+#define FORWARD true
+#define BACKWARDS false
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -67,7 +70,8 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-bool direction = true;
+bool leftMotorForward = true;
+bool rigthMotorForward = true;
 
 //the status of lidar detection if true than lidar is detecting some object
 bool leftSideLidar = false;
@@ -90,45 +94,109 @@ void enable_motor(int motor_id)
 
 }
 
-//funckja zmienia kierunek poprzzez zmienienie globalnej zmiennej direction
-bool change_direction(bool current_direction,int motor_id)
+void sumoUpdateDirection()
 {
-	if(current_direction==true)
+	if(LEFT_MOTOR == 1 && RIGTH_MOTOR == 2)
 	{
-		switch(motor_id)
-			{
-			case 1:
-				HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
-				HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
-				break;
-			case 2:
-				HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
-				HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
-				break;
-			}
-		return false;
+		if(leftMotorForward)
+		{
+			HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
+			HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
+		}
+		else{
+			HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
+			HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
+		}
+		if(rigthMotorForward)
+		{
+			HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
+			HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
+		}
+		else{
+			HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
+			HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
+		}
+	}
 
-	}else
+	else if(LEFT_MOTOR == 2 && RIGTH_MOTOR == 1)
 	{
-		switch(motor_id)
-					{
-					case 1:
-						HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
-						HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
-						break;
-					case 2:
-						HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
-						HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
-						break;
-					}
-		return true;
-
+		if(leftMotorForward)
+		{
+			HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
+			HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
+		}
+		else{
+			HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
+			HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
+		}
+		if(rigthMotorForward)
+		{
+			HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
+			HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
+		}
+		else{
+			HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
+			HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
+		}
 	}
 
 }
+
+void change_direction(int motor_id)
+{
+	if(LEFT_MOTOR == 1 && RIGTH_MOTOR == 2)
+		switch (motor_id) {
+			case 1:
+				leftMotorForward = !leftMotorForward;
+				break;
+			case 2:
+				rigthMotorForward = !rigthMotorForward;
+			default:
+				break;
+		}
+	else if(LEFT_MOTOR == 2 && RIGTH_MOTOR == 1){
+		switch (motor_id) {
+			case 1:
+				rigthMotorForward = !rigthMotorForward;
+				break;
+			case 2:
+				leftMotorForward = !leftMotorForward;
+			default:
+				break;
+		}
+	}
+	sumoUpdateDirection();
+}
+
+void motorDirection(bool direction, int motor_id)
+{
+	switch (motor_id) {
+		case 1:
+			if(LEFT_MOTOR == 1 && RIGTH_MOTOR == 2){
+				leftMotorForward = direction;
+			}
+			else if(LEFT_MOTOR == 2 && RIGTH_MOTOR == 1){
+				rigthMotorForward = direction;
+			}
+			break;
+		case 2:
+			if(LEFT_MOTOR == 1 && RIGTH_MOTOR == 2){
+				rigthMotorForward = direction;
+			}
+			else if(LEFT_MOTOR == 2 && RIGTH_MOTOR == 1){
+				leftMotorForward = direction;
+			}
+			break;
+		default:
+			break;
+	}
+	sumoUpdateDirection();
+}
+
 //funkcja ustala wartosc predkosci
 void move_at_speed(int speed,int motor_id)
 {
+	if(speed > 100)speed = 100;
 	switch(motor_id)
 		{
 		case 1:
@@ -138,6 +206,11 @@ void move_at_speed(int speed,int motor_id)
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, speed);
 			break;
 		}
+}
+
+void moveForward()
+{
+	//
 }
 
 //pure function for tests bcs I dont have access to lidar right now
@@ -216,11 +289,41 @@ int main(void)
 
   int speed = 0;
 
-  change_direction(direction, RIGTH_MOTOR);
-  change_direction(direction, LEFT_MOTOR);
+
+  //change_direction(direction, LEFT_MOTOR);
+  sumoUpdateDirection();
+
+  move_at_speed(100, RIGTH_MOTOR);
+
+  move_at_speed(100, LEFT_MOTOR);
+
+  motorDirection(FORWARD, RIGTH_MOTOR);
+  motorDirection(FORWARD, LEFT_MOTOR);
 
   while (1)
   {
+	  motorDirection(FORWARD, LEFT_MOTOR);
+	  HAL_Delay(1000);
+	  motorDirection(BACKWARDS, RIGTH_MOTOR);
+	  HAL_Delay(1000);
+	  motorDirection(BACKWARDS, LEFT_MOTOR);
+	  HAL_Delay(1000);
+	  motorDirection(FORWARD, RIGTH_MOTOR);
+	  HAL_Delay(2000);
+
+	  change_direction(LEFT_MOTOR);
+
+	  HAL_Delay(1000);
+
+	  change_direction(RIGTH_MOTOR);
+
+	  HAL_Delay(2000);
+	  change_direction(LEFT_MOTOR);
+	  change_direction(RIGTH_MOTOR);
+	  HAL_Delay(1000);
+
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -263,13 +366,6 @@ int main(void)
 	  if(rigthSideLidar)CDC_Transmit_FS("1\n\r", 3);
 	  else CDC_Transmit_FS("0\n\r", 3);
 	  */
-
-
-	  move_at_speed(speed, RIGTH_MOTOR);
-	  //move_at_speed(speed, LEFT_MOTOR);
-	  if(speed < 70)speed+=10;
-	  HAL_Delay(1000);
-
 
   }
   /* USER CODE END 3 */
