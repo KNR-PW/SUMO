@@ -36,7 +36,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RIGTH_MOTOR 1
+#define LEFT_MOTOR 2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -68,6 +69,7 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 bool direction = true;
 
+//the status of lidar detection if true than lidar is detecting some object
 bool leftSideLidar = false;
 bool leftFrontLidar = false;
 bool rigthFrontLidar = false;
@@ -78,10 +80,10 @@ void enable_motor(int motor_id)
 {
 	switch(motor_id)
 	{
-	case 1:
+	case RIGTH_MOTOR:
 		HAL_GPIO_WritePin(EN_Motor_1_GPIO_Port, EN_Motor_1_Pin,SET);
 		break;
-	case 2:
+	case LEFT_MOTOR:
 		HAL_GPIO_WritePin(EN_Motor_2_GPIO_Port, EN_Motor_2_Pin,SET);
 		break;
 	}
@@ -95,11 +97,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 			{
-			case 1:
+			case RIGTH_MOTOR:
 				HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
 				break;
-			case 2:
+			case LEFT_MOTOR:
 				HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
 				break;
@@ -110,11 +112,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 					{
-					case 1:
+					case RIGTH_MOTOR:
 						HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
 						break;
-					case 2:
+					case LEFT_MOTOR:
 						HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
 						break;
@@ -129,14 +131,15 @@ void move_at_speed(int speed,int motor_id)
 {
 	switch(motor_id)
 		{
-		case 1:
+		case RIGTH_MOTOR:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, speed);
 			break;
-		case 2:
+		case LEFT_MOTOR:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, speed);
 			break;
 		}
 }
+
 //pure function for tests bcs I dont have access to lidar right now
 void readLidarButtons()
 {
