@@ -36,8 +36,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define RIGTH_MOTOR 1
-#define LEFT_MOTOR 2
+#define RIGTH_MOTOR 2
+#define LEFT_MOTOR 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -80,10 +80,10 @@ void enable_motor(int motor_id)
 {
 	switch(motor_id)
 	{
-	case RIGTH_MOTOR:
+	case 1:
 		HAL_GPIO_WritePin(EN_Motor_1_GPIO_Port, EN_Motor_1_Pin,SET);
 		break;
-	case LEFT_MOTOR:
+	case 2:
 		HAL_GPIO_WritePin(EN_Motor_2_GPIO_Port, EN_Motor_2_Pin,SET);
 		break;
 	}
@@ -97,11 +97,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 			{
-			case RIGTH_MOTOR:
+			case 1:
 				HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
 				break;
-			case LEFT_MOTOR:
+			case 2:
 				HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
 				break;
@@ -112,11 +112,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 					{
-					case RIGTH_MOTOR:
+					case 1:
 						HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
 						break;
-					case LEFT_MOTOR:
+					case 2:
 						HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
 						break;
@@ -131,10 +131,10 @@ void move_at_speed(int speed,int motor_id)
 {
 	switch(motor_id)
 		{
-		case RIGTH_MOTOR:
+		case 1:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, speed);
 			break;
-		case LEFT_MOTOR:
+		case 2:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, speed);
 			break;
 		}
@@ -201,6 +201,10 @@ int main(void)
 
  //TIM2 is blinking blue diode every one second. Its just to check if stm is working properly
  HAL_TIM_Base_Start_IT(&htim2);
+
+ //TIM1 is used for PWM that controls motor speed;
+ HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+ HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -210,7 +214,10 @@ int main(void)
   uint8_t uartClrScr[] = { 27, 91, 50, 74, 27, 91, 72, 0 };
   HAL_Delay(50);
 
+  int speed = 0;
 
+  change_direction(direction, RIGTH_MOTOR);
+  change_direction(direction, LEFT_MOTOR);
 
   while (1)
   {
@@ -234,11 +241,14 @@ int main(void)
 	  }
 	 //HAL_GPIO_TogglePin(RED_GPIO_Port, RED_Pin);
 	  */
+	  /*
 	  HAL_Delay(500);
 	  readLidarData();
 	  if(leftSideLidar)HAL_GPIO_WritePin(RED_GPIO_Port, RED_Pin, 1);
 	  else HAL_GPIO_WritePin(RED_GPIO_Port, RED_Pin, 0);
+	  */
 
+	  /*
 	  CDC_Transmit_FS(uartClrScr, sizeof(uartClrScr));
 	  HAL_Delay(10);
 	  if(leftSideLidar)CDC_Transmit_FS("1\n\r", 3);
@@ -252,7 +262,13 @@ int main(void)
 	  HAL_Delay(10);
 	  if(rigthSideLidar)CDC_Transmit_FS("1\n\r", 3);
 	  else CDC_Transmit_FS("0\n\r", 3);
+	  */
 
+
+	  move_at_speed(speed, RIGTH_MOTOR);
+	  //move_at_speed(speed, LEFT_MOTOR);
+	  if(speed < 70)speed+=10;
+	  HAL_Delay(1000);
 
 
   }
@@ -325,9 +341,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 64-1;
+  htim1.Init.Prescaler = 48000-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 256;
+  htim1.Init.Period = 100-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
