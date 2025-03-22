@@ -55,10 +55,10 @@ void enable_motor(int motor_id)
 {
 	switch(motor_id)
 	{
-	case RIGTH_MOTOR:
+	case 1:
 		HAL_GPIO_WritePin(EN_Motor_1_GPIO_Port, EN_Motor_1_Pin,SET);
 		break;
-	case LEFT_MOTOR:
+	case 2:
 		HAL_GPIO_WritePin(EN_Motor_2_GPIO_Port, EN_Motor_2_Pin,SET);
 		break;
 	}
@@ -72,11 +72,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 			{
-			case RIGTH_MOTOR:
+			case 1:
 				HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,RESET);
 				break;
-			case LEFT_MOTOR:
+			case 2:
 				HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,SET);
 				HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,RESET);
 				break;
@@ -87,11 +87,11 @@ bool change_direction(bool current_direction,int motor_id)
 	{
 		switch(motor_id)
 					{
-					case RIGTH_MOTOR:
+					case 1:
 						HAL_GPIO_WritePin(DIR_MOT_1_L_GPIO_Port, DIR_MOT_1_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_1_R_GPIO_Port, DIR_MOT_1_R_Pin,SET);
 						break;
-					case LEFT_MOTOR:
+					case 2:
 						HAL_GPIO_WritePin(DIR_MOT_2_L_GPIO_Port, DIR_MOT_2_L_Pin,RESET);
 						HAL_GPIO_WritePin(DIR_MOT_2_R_GPIO_Port, DIR_MOT_2_R_Pin,SET);
 						break;
@@ -106,10 +106,10 @@ void move_at_speed(int speed,int motor_id)
 {
 	switch(motor_id)
 		{
-		case RIGTH_MOTOR:
+		case 1:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, speed);
 			break;
-		case LEFT_MOTOR:
+		case 2:
 			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, speed);
 			break;
 		}
