@@ -31,6 +31,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define LINE_SENSOR_1 1
+#define LINE_SENSOR_2 2
+#define LINE_SENSOR_3 3
+#define LINE_SENSOR_4 4
 
 /* USER CODE END PD */
 
@@ -68,7 +72,39 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
+//this fucntion allowes easy UART printing (printf)
+int __io_putchar(int ch)
+{
+	if (ch == '\n') {
+	        uint8_t ch2 = '\r';
+	        HAL_UART_Transmit(&huart2, &ch2, 1, HAL_MAX_DELAY);
+	    }
+    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+    return 1;
+}
 
+uint32_t LineDetectorMessure(uint8_t LineSensor_ID)
+{
+	switch (LineSensor_ID) {
+		case LINE_SENSOR_1:
+			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_5);
+			break;
+		case LINE_SENSOR_2:
+			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_10);
+			break;
+		case LINE_SENSOR_3:
+			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_11);
+			break;
+		case LINE_SENSOR_4:
+			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_15);
+			break;
+		default:
+			break;
+	}
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	uint32_t value = HAL_ADC_GetValue(&hadc1);
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -121,7 +157,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //prinf("Hello");
+	  uint32_t value = LineDetectorMessure(1);
+	  printf("ADC = %lu\n", value);
+	  if (value < 1500)
+		  printf("Biala linia!\n");
+	  else if (value > 1500)
+		  printf("czarna linia!\n");
+	  HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -637,7 +679,18 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+//this function allow user to change Active ADC channel
+void ADC_SetActiveChannel(ADC_HandleTypeDef *hadc, uint32_t AdcChannel)
+{
+  ADC_ChannelConfTypeDef sConfig = {0};
+  sConfig.Channel = AdcChannel;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(hadc, &sConfig) != HAL_OK)
+  {
+   Error_Handler();
+  }
+}
 /* USER CODE END 4 */
 
 /**
