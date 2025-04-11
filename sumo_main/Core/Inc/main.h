@@ -73,18 +73,18 @@ void Error_Handler(void);
 #define ADC_Lin1_GPIO_Port GPIOA
 #define ADC_Lin3_Pin GPIO_PIN_5
 #define ADC_Lin3_GPIO_Port GPIOC
-#define XSHUT_3_Pin GPIO_PIN_12
-#define XSHUT_3_GPIO_Port GPIOB
+#define XSHUT_2_Pin GPIO_PIN_7
+#define XSHUT_2_GPIO_Port GPIOC
 #define Sonic1_Echo_Pin GPIO_PIN_8
 #define Sonic1_Echo_GPIO_Port GPIOC
-#define XSHUT_2_Pin GPIO_PIN_11
-#define XSHUT_2_GPIO_Port GPIOA
-#define XSHUT_1_Pin GPIO_PIN_12
-#define XSHUT_1_GPIO_Port GPIOA
+#define XSHUT_3_Pin GPIO_PIN_10
+#define XSHUT_3_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
+#define XSHUT_1_Pin GPIO_PIN_6
+#define XSHUT_1_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

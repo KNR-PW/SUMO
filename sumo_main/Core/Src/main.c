@@ -121,7 +121,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  prinf("Hello");
+	  //prinf("Hello");
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -597,13 +597,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4|Sonic1_Echo_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_2|XSHUT_3_Pin|GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_13|XSHUT_1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, XSHUT_2_Pin|XSHUT_1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(XSHUT_3_GPIO_Port, XSHUT_3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -611,26 +611,26 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC4 Sonic1_Echo_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|Sonic1_Echo_Pin;
+  /*Configure GPIO pins : PC4 XSHUT_2_Pin Sonic1_Echo_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 PB2 XSHUT_3_Pin PB13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|XSHUT_3_Pin|GPIO_PIN_13;
+  /*Configure GPIO pins : PB1 PB2 PB13 XSHUT_1_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_13|XSHUT_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : XSHUT_2_Pin XSHUT_1_Pin */
-  GPIO_InitStruct.Pin = XSHUT_2_Pin|XSHUT_1_Pin;
+  /*Configure GPIO pin : XSHUT_3_Pin */
+  GPIO_InitStruct.Pin = XSHUT_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(XSHUT_3_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
