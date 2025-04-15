@@ -17,11 +17,19 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
+#include "lidar_I2C.h"
+#include "lidar_UART.h"
+#include "lineDetector.h"
+#include "motors.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,10 +39,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define LINE_SENSOR_1 1
-#define LINE_SENSOR_2 2
-#define LINE_SENSOR_3 3
-#define LINE_SENSOR_4 4
 
 /* USER CODE END PD */
 
@@ -55,8 +59,17 @@ TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim12;
 
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
+//this value if false makes program stucks inside while(1) loop thats makes nothing
+bool SUMO_ENABLE = false;
+
+//the status of lidar detection if true than lidar is detecting some object
+bool leftSideLidar = false;
+bool leftFrontLidar = false;
+bool rigthFrontLidar = false;
+bool rigthSideLidar = false;
 
 /* USER CODE END PV */
 
@@ -71,8 +84,10 @@ static void MX_TIM12_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-//this fucntion allowes easy UART printing (printf)
+
+//this function allows easy UART printing (printf)
 int __io_putchar(int ch)
 {
 	if (ch == '\n') {
@@ -83,28 +98,14 @@ int __io_putchar(int ch)
     return 1;
 }
 
-uint32_t LineDetectorMessure(uint8_t LineSensor_ID)
+//clears screen inside terminal (works fine for PUTTY terminal, might be not compatible with others)
+void clearScreen()
 {
-	switch (LineSensor_ID) {
-		case LINE_SENSOR_1:
-			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_5);
-			break;
-		case LINE_SENSOR_2:
-			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_10);
-			break;
-		case LINE_SENSOR_3:
-			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_11);
-			break;
-		case LINE_SENSOR_4:
-			ADC_SetActiveChannel(&hadc1, ADC_CHANNEL_15);
-			break;
-		default:
-			break;
-	}
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	uint32_t value = HAL_ADC_GetValue(&hadc1);
+	uint8_t uartClrScr[] = { 27, 91, 50, 74, 27, 91, 72, 0 };
+	HAL_UART_Transmit(&huart2, uartClrScr, sizeof(uartClrScr), 10);
 }
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -149,21 +150,105 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_Delay(100);
+  clearScreen();
+
+  Lidar_initALL();
+
+	uint16_t distance1 = 0;
+	uint16_t distance2 = 0;
+	uint16_t distance3 = 0;
+	uint16_t distance4 = 0;
+
+  ///*
+  if(!SUMO_ENABLE)
+  {
+	  printf("Waiting for start signal\n\r");
+	  while(!SUMO_ENABLE){;}
+	  printf("Sumo enabled\n\r");
+  }//*/
+
+
+  HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
+
+
+  sumoUpdateDirection();
+
+  //move_at_speed(10, RIGTH_MOTOR);
+  //move_at_speed(10, LEFT_MOTOR);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
   while (1)
   {
-	  uint32_t value = LineDetectorMessure(1);
-	  printf("ADC = %lu\n", value);
-	  if (value < 1500)
-		  printf("Biala linia!\n");
-	  else if (value > 1500)
-		  printf("czarna linia!\n");
-	  HAL_Delay(1000);
+	  distance1 = readLidar1();
+	  distance2 = readLidar2();
+	  distance3 = readLidar3();
+	  distance4 = readLidar4();
+
+	  uint32_t topLidarsThreshold = 400;
+	  uint32_t bottomLidarsThreshold = 200;
+
+	  if(distance1 < topLidarsThreshold)
+	  {
+		  leftFrontLidar = true;
+	  }else leftFrontLidar=false;
+	  if(distance2 < topLidarsThreshold)
+	  {
+		  rigthFrontLidar = true;
+	  }else rigthFrontLidar=false;
+
+	  if(distance3 < bottomLidarsThreshold)
+	  {
+		  rigthSideLidar = true;
+	  }else rigthSideLidar=false;
+	  if(distance4 < bottomLidarsThreshold)
+	  {
+		  leftSideLidar = true;
+	  }else leftSideLidar=false;
+
+	  if(leftFrontLidar && rigthFrontLidar)
+	  {
+		  move_at_speed(100, RIGTH_MOTOR);
+		  move_at_speed(100, LEFT_MOTOR);
+	  }
+	  else if(leftFrontLidar && leftSideLidar)
+	  {
+		  move_at_speed(100, RIGTH_MOTOR);
+		  move_at_speed(0, LEFT_MOTOR);
+	  }
+	  else if(leftFrontLidar)
+	  {
+		  move_at_speed(75, RIGTH_MOTOR);
+		  move_at_speed(0, LEFT_MOTOR);
+	  }
+	  else if(rigthFrontLidar && rigthSideLidar)
+	  {
+		  move_at_speed(0, RIGTH_MOTOR);
+		  move_at_speed(100, LEFT_MOTOR);
+	  }
+	  else if(rigthFrontLidar)
+	  {
+		  move_at_speed(0, RIGTH_MOTOR);
+		  move_at_speed(75, LEFT_MOTOR);
+	  }
+	  else
+	  {
+		  move_at_speed(0, RIGTH_MOTOR);
+		  move_at_speed(0, LEFT_MOTOR);
+	  }
+
+	  printf("Czujnik 1: %d mm, Czujnik 2: %d mm, Czujnik 3: %d mm, Czujnik 4: %d mm\n", distance1, distance2, distance3, distance4);
+
+	  HAL_Delay(100);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -193,9 +278,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 96;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -209,10 +294,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -239,7 +324,7 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -286,7 +371,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = 100;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -554,17 +639,27 @@ static void MX_TIM12_Init(void)
 
   /* USER CODE END TIM12_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM12_Init 1 */
 
   /* USER CODE END TIM12_Init 1 */
   htim12.Instance = TIM12;
-  htim12.Init.Prescaler = 0;
+  htim12.Init.Prescaler = 48000-1;
   htim12.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim12.Init.Period = 65535;
+  htim12.Init.Period = 100-1;
   htim12.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim12.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim12) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim12, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_Init(&htim12) != HAL_OK)
   {
     Error_Handler();
@@ -622,6 +717,39 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -639,10 +767,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, DIR_MOT_2_R_Pin|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_13|XSHUT_1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, DIR_MOT_1_R_Pin|DIR_MOT_1_L_Pin|DIR_MOT_2_L_Pin|XSHUT_1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(XSHUT_3_GPIO_Port, XSHUT_3_Pin, GPIO_PIN_RESET);
@@ -653,15 +781,21 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC4 XSHUT_2_Pin Sonic1_Echo_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin;
+  /*Configure GPIO pins : DIR_MOT_2_R_Pin XSHUT_2_Pin Sonic1_Echo_Pin */
+  GPIO_InitStruct.Pin = DIR_MOT_2_R_Pin|XSHUT_2_Pin|Sonic1_Echo_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 PB2 PB13 XSHUT_1_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_13|XSHUT_1_Pin;
+  /*Configure GPIO pin : PILOCIK_Pin */
+  GPIO_InitStruct.Pin = PILOCIK_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(PILOCIK_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DIR_MOT_1_R_Pin DIR_MOT_1_L_Pin DIR_MOT_2_L_Pin XSHUT_1_Pin */
+  GPIO_InitStruct.Pin = DIR_MOT_1_R_Pin|DIR_MOT_1_L_Pin|DIR_MOT_2_L_Pin|XSHUT_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -673,6 +807,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(XSHUT_3_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
