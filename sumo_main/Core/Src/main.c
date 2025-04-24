@@ -71,6 +71,9 @@ bool leftFrontLidar = false;
 bool rigthFrontLidar = false;
 bool rigthSideLidar = false;
 
+//while true all printf commands wont work - its for saving time
+bool PRINTF_ENABLED = false;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,11 +93,13 @@ static void MX_USART3_UART_Init(void);
 //this function allows easy UART printing (printf)
 int __io_putchar(int ch)
 {
-	if (ch == '\n') {
-	        uint8_t ch2 = '\r';
-	        HAL_UART_Transmit(&huart2, &ch2, 1, HAL_MAX_DELAY);
-	    }
-    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+	if(PRINTF_ENABLED){
+		if (ch == '\n') {
+		        uint8_t ch2 = '\r';
+		        HAL_UART_Transmit(&huart2, &ch2, 1, HAL_MAX_DELAY);
+		    }
+	    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+	}
     return 1;
 }
 
@@ -154,6 +159,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_Delay(100);
   clearScreen();
+  if(!PRINTF_ENABLED){
+	  PRINTF_ENABLED = true;
+	  printf("Printing is disabled\n");
+	  PRINTF_ENABLED = false;
+  }
 
   Lidar_initALL();
 
