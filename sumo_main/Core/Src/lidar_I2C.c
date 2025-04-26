@@ -141,7 +141,7 @@ void resetLidar3()
 //---------------------------------------------------------
 uint8_t g_i2cAddr = ADDRESS_DEFAULT;
 volatile uint8_t * LidarAddr = &g_i2cAddr;
-uint16_t g_ioTimeout = 20;  // no timeout
+uint16_t g_ioTimeout = 30;  // no timeout
 uint8_t g_isTimeout = 0;
 uint16_t g_timeoutStartMs;
 uint8_t g_stopVariable; // read by init and used when starting measurement; is StopVariable field of VL53L0X_DevData_t structure in API
@@ -941,6 +941,17 @@ uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats, int lid
 	  }
   }
 
+  extern bool PRINTF_ENABLED;
+  uint8_t id = readReg(0xC0);  // IDENTIFICATION__MODEL_ID
+  if (id != 0xEE) {
+	  if(!PRINTF_ENABLED)
+	  {
+		  PRINTF_ENABLED = true;
+		  printf(" Sensor not responding or wrong device\n");
+		  PRINTF_ENABLED = false;
+	  }else printf(" Sensor responding\n");
+  }
+
 
   uint16_t temp;
 
@@ -955,7 +966,7 @@ uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats, int lid
 		  PRINTF_ENABLED = true;
 		  printf("time: %dms\n",end - start);
 		  PRINTF_ENABLED = false;
-	  }
+	  }else printf("time: %dms\n",end - start);
     if (checkTimeoutExpired())
     {
       g_isTimeout = true;
@@ -1025,6 +1036,23 @@ uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats, int lid
     extraStats->rawDistance = temp;
   }
   writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);
+
+  if(temp == 0)
+  {
+	  switch (lidar_ID) {
+		case 1:
+	    	  timeOutsCounter_LIDAR_1++;
+			break;
+		case 2:
+	    	  timeOutsCounter_LIDAR_2++;
+				break;
+		case 3:
+	    	  timeOutsCounter_LIDAR_3++;
+				break;
+		default:
+			break;
+	}
+  }
   return temp;
 }
 

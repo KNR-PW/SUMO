@@ -215,7 +215,7 @@ void EXTI0_IRQHandler(void)
 
   //start the one pulse timer that will reset IR counter
   __HAL_TIM_ENABLE(&htim13);
-  if((36 > IR_detectionCounter) && (IR_detectionCounter > 14))
+  if((36 > IR_detectionCounter) && (IR_detectionCounter > 20))
   {
 	  SUMO_ENABLE = !SUMO_ENABLE;
 
@@ -240,8 +240,8 @@ void TIM1_BRK_TIM9_IRQHandler(void)
 	  TIM9->CNT = 0;
 	  __HAL_TIM_CLEAR_IT(&htim9, TIM_IT_UPDATE); // ← IMPORTANT!
 
-	  move_at_speed(0, RIGTH_MOTOR);
-	  move_at_speed(0, LEFT_MOTOR);
+	  //move_at_speed(0, RIGTH_MOTOR);
+	  //move_at_speed(0, LEFT_MOTOR);
   /* USER CODE END TIM1_BRK_TIM9_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   HAL_TIM_IRQHandler(&htim9);

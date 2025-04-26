@@ -38,13 +38,20 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define forwardMaxSpeed 20
-#define forwardMediumSpeed 10
-#define forwardMinSpeed 5
+#define forwardMaxSpeed 90
+#define forwardMediumSpeed 50
+#define forwardMinSpeed 35
 
-#define turnMaxSpeed 15
-#define turnMediumSpeed 15
-#define turnMinSpeed 10
+#define turnMaxSpeed 55
+#define turnMediumSpeed 50
+#define turnMinSpeed 30
+
+uint32_t lidarsThreshold = 300;
+
+uint16_t distance1 = 0;
+uint16_t distance2 = 0;
+uint16_t distance3 = 0;
+uint16_t distance4 = 0;
 
 
 /* USER CODE END PD */
@@ -77,10 +84,12 @@ bool SUMO_ENABLE = false;
 bool PRINTF_ENABLED = false;
 
 //while true robot start moving slowly forward and making small truns to find enemy robot
-bool SEARCH_ENABLED = false;
+bool SEARCH_ENABLED = true;
 
 //while true robot can move
-bool MOTORS_ENABLE = true;
+bool MOTORS_ENABLED = true;
+
+bool LINE_SENSOR_ENABLED = false;
 
 //the status of lidar detection if true than lidar is detecting some object
 bool leftSideLidar = false;
@@ -100,7 +109,7 @@ bool lineDetected = false;
 
 int searchState = ForwardSearch;
 int searchStateCounter = 0;
-int searchStateChangeAfter = 4;
+int searchStateChangeAfter = 20;
 
 /* USER CODE END PV */
 
@@ -219,7 +228,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -255,10 +264,7 @@ int main(void)
 
   Lidar_initALL();
 
-	uint16_t distance1 = 0;
-	uint16_t distance2 = 0;
-	uint16_t distance3 = 0;
-	uint16_t distance4 = 0;
+
 
   //enables timer that will be used for IR sensor to turn on and off robot
   HAL_TIM_OnePulse_Start_IT(&htim13, TIM_CHANNEL_ALL);
@@ -277,6 +283,56 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  if(!SUMO_ENABLE)
+  	  {
+  		  printf("Waiting for start signal\n\r");
+  		  while(!SUMO_ENABLE){
+  			  move_at_speed(0, RIGTH_MOTOR);
+  			  move_at_speed(0, LEFT_MOTOR);
+  		  }
+  		  printf("Sumo enabled\n\r");
+  	  }//*/
+
+  bool firstDetection = false;
+
+  while(!firstDetection)
+  {
+	  distance1 = readLidar3();			//temporary switched lidar 1 and 3
+	  distance2 = readLidar2();
+	  distance3 = readLidar1();        //temporary switched lidar 1 and 3
+	  distance4 = readLidar4();
+
+
+
+	  if(distance1 < lidarsThreshold)
+	  {
+		  rigthSideLidar = true;
+	  }else rigthSideLidar=false;
+	  if(distance2 < lidarsThreshold)
+	  {
+		  rigthFrontLidar = true;
+	  }else rigthFrontLidar=false;
+
+	  if(distance3 < lidarsThreshold)
+	  {
+		  rigthFrontLidar = true;
+	  }else leftFrontLidar=false;
+	  if(distance4 < lidarsThreshold)
+	  {
+		  leftSideLidar = true;
+	  }else leftSideLidar=false;
+
+	  move_at_speed(90, RIGTH_MOTOR);
+	  move_at_speed(0, LEFT_MOTOR);
+
+	  if(rigthSideLidar || rigthFrontLidar || rigthFrontLidar || rigthFrontLidar)
+		  {
+		  	  firstDetection = true;
+			  move_at_speed(0, RIGTH_MOTOR);
+			  move_at_speed(0, LEFT_MOTOR);
+		  }
+  }
+
 
   while (1)
   {
@@ -284,7 +340,10 @@ int main(void)
 	  if(!SUMO_ENABLE)
 	  {
 		  printf("Waiting for start signal\n\r");
-		  while(!SUMO_ENABLE){;}
+		  while(!SUMO_ENABLE){
+			  move_at_speed(0, RIGTH_MOTOR);
+			  move_at_speed(0, LEFT_MOTOR);
+		  }
 		  printf("Sumo enabled\n\r");
 	  }//*/
 
@@ -301,7 +360,7 @@ int main(void)
 	  distance4 = readLidar4();
 	  auto end4 = HAL_GetTick();
 
-	  uint32_t lidarsThreshold = 400;
+
 
 	  if(distance1 < lidarsThreshold)
 	  {
@@ -321,8 +380,11 @@ int main(void)
 		  leftSideLidar = true;
 	  }else leftSideLidar=false;
 
-
-	  if(!lineDetected){
+      if(!LINE_SENSOR_ENABLED)
+      {
+    	  lineDetected = false;
+      }
+	  if(!lineDetected && MOTORS_ENABLED){
 		  //move forward
 		  if(leftFrontLidar && rigthFrontLidar)
 		  {
@@ -377,11 +439,13 @@ int main(void)
 			  move_at_speed(0, RIGTH_MOTOR);
 			  move_at_speed(turnMediumSpeed, LEFT_MOTOR);
 		  }
+		  else if(SEARCH_ENABLED)SumoSearch();
 		  else
 		  {
-			  if(SEARCH_ENABLED)SumoSearch();
+			  move_at_speed(0, RIGTH_MOTOR);
+			  move_at_speed(0, LEFT_MOTOR);
 		  }
-		  HAL_TIM_Base_Start_IT(&htim9);
+		  //HAL_TIM_Base_Start_IT(&htim9);
 	  }
 	  printf("Czujnik 1: %d mm, Czujnik 2: %d mm, Czujnik 3: %d mm, Czujnik 4: %d mm\n", distance1, distance2, distance3, distance4);
 	  if(!PRINTF_ENABLED)
@@ -399,7 +463,7 @@ int main(void)
 	  else if (line3 < 500)lineDetected = true;
 	  else lineDetected = false;
 
-	  if(lineDetected)
+	  if(lineDetected && LINE_SENSOR_ENABLED)
 	  {
 		  move_at_speed(0, RIGTH_MOTOR);
 		  move_at_speed(0, LEFT_MOTOR);
@@ -783,7 +847,7 @@ static void MX_TIM12_Init(void)
   htim12.Instance = TIM12;
   htim12.Init.Prescaler = 48000-1;
   htim12.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim12.Init.Period = 100-1;
+  htim12.Init.Period = 300-1;
   htim12.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim12.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim12) != HAL_OK)
