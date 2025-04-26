@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include "motors.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +34,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 extern bool SUMO_ENABLE;
+extern TIM_HandleTypeDef htim9;
+extern TIM_HandleTypeDef htim13;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,7 +59,8 @@ extern bool SUMO_ENABLE;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim9;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -205,12 +209,50 @@ void SysTick_Handler(void)
 void EXTI0_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI0_IRQn 0 */
-  SUMO_ENABLE = !SUMO_ENABLE;
+  //so the was no signal form IR sensor lately
+  if(TIM13 -> CNT == 0)
+  {
+	  SUMO_ENABLE = !SUMO_ENABLE;
+	  HAL_TIM_OnePulse_Start(&htim13, TIM_CHANNEL_ALL);
+	  __HAL_TIM_ENABLE(&htim13);
+
+	  extern bool PRINTF_ENABLED;
+	  if(!PRINTF_ENABLED)
+	  {
+		  PRINTF_ENABLED = true;
+		  printf("\nStarting signal detected\n\n");
+		  printf("	%d",TIM13->CNT);
+		  PRINTF_ENABLED = false;
+	  }
+  }
+
   /* USER CODE END EXTI0_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(PILOCIK_Pin);
   /* USER CODE BEGIN EXTI0_IRQn 1 */
 
   /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM1 break interrupt and TIM9 global interrupt.
+  */
+void TIM1_BRK_TIM9_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM1_BRK_TIM9_IRQn 0 */
+	  HAL_TIM_Base_Stop_IT(&htim9);
+	  TIM9->CNT = 0;
+	  __HAL_TIM_CLEAR_IT(&htim9, TIM_IT_UPDATE); // ← IMPORTANT!
+
+	  printf("One sec\n");
+
+	  move_at_speed(0, RIGTH_MOTOR);
+	  move_at_speed(0, LEFT_MOTOR);
+  /* USER CODE END TIM1_BRK_TIM9_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim1);
+  HAL_TIM_IRQHandler(&htim9);
+  /* USER CODE BEGIN TIM1_BRK_TIM9_IRQn 1 */
+
+  /* USER CODE END TIM1_BRK_TIM9_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

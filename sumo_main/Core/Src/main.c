@@ -17,7 +17,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -39,6 +38,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define forwardMaxSpeed 20
+#define forwardMediumSpeed 10
+#define forwardMinSpeed 5
+
+#define turnMaxSpeed 15
+#define turnMediumSpeed 15
+#define turnMinSpeed 10
+
 
 /* USER CODE END PD */
 
@@ -56,7 +63,9 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim5;
+TIM_HandleTypeDef htim9;
 TIM_HandleTypeDef htim12;
+TIM_HandleTypeDef htim13;
 
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
@@ -65,14 +74,31 @@ UART_HandleTypeDef huart3;
 //this value if false makes program stucks inside while(1) loop thats makes nothing
 bool SUMO_ENABLE = false;
 
+//while true all printf commands wont work - its for saving time
+bool PRINTF_ENABLED = false;
+
+//while true robot start moving slowly forward and making small truns to find enemy robot
+bool SEARCH_ENABLED = false;
+
 //the status of lidar detection if true than lidar is detecting some object
 bool leftSideLidar = false;
 bool leftFrontLidar = false;
 bool rigthFrontLidar = false;
 bool rigthSideLidar = false;
 
-//while true all printf commands wont work - its for saving time
-bool PRINTF_ENABLED = false;
+
+bool lineDetected = false;
+
+
+#define ForwardSearch 1
+#define LeftSearch 2
+#define RigthSearch 3
+#define RigthSearch2 4
+#define LeftSearch2 5
+
+int searchState = ForwardSearch;
+int searchStateCounter = 0;
+int searchStateChangeAfter = 4;
 
 /* USER CODE END PV */
 
@@ -88,6 +114,8 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM9_Init(void);
+static void MX_TIM13_Init(void);
 /* USER CODE BEGIN PFP */
 
 //this function allows easy UART printing (printf)
@@ -110,6 +138,64 @@ void clearScreen()
 	HAL_UART_Transmit(&huart2, uartClrScr, sizeof(uartClrScr), 10);
 }
 
+//robot start moving slowly forward and making small truns to find enemy robot
+void SumoSearch()
+{
+  searchStateCounter++;
+  switch (searchState) {
+	case ForwardSearch:
+		if(searchStateCounter == 3 * searchStateChangeAfter)
+		{
+			searchState = LeftSearch;
+			searchStateCounter = 0;
+		}
+		move_at_speed(forwardMediumSpeed, RIGTH_MOTOR);
+		move_at_speed(forwardMediumSpeed, LEFT_MOTOR);
+		break;
+	case LeftSearch:
+		if(searchStateCounter == searchStateChangeAfter)
+		{
+			searchState = RigthSearch;
+			searchStateCounter = 0;
+		}
+		move_at_speed(turnMinSpeed, RIGTH_MOTOR);
+		move_at_speed(0, LEFT_MOTOR);
+		break;
+	case RigthSearch:
+		if(searchStateCounter == searchStateChangeAfter)
+		{
+			searchState = RigthSearch2;
+			searchStateCounter = 0;
+		}
+		move_at_speed(0, RIGTH_MOTOR);
+		move_at_speed(turnMinSpeed, LEFT_MOTOR);
+		break;
+	case RigthSearch2:
+		if(searchStateCounter == searchStateChangeAfter)
+		{
+			searchState = LeftSearch2;
+			searchStateCounter = 0;
+		}
+		move_at_speed(0, RIGTH_MOTOR);
+		move_at_speed(turnMinSpeed, LEFT_MOTOR);
+		break;
+	case LeftSearch2:
+		if(searchStateCounter == searchStateChangeAfter)
+		{
+			searchState = ForwardSearch;
+			searchStateCounter = 0;
+		}
+		move_at_speed(turnMinSpeed, RIGTH_MOTOR);
+		move_at_speed(0, LEFT_MOTOR);
+		break;
+	default:
+		searchState = ForwardSearch;
+		searchStateCounter = 0;
+		move_at_speed(forwardMediumSpeed, RIGTH_MOTOR);
+		move_at_speed(forwardMediumSpeed, LEFT_MOTOR);
+		break;
+  }
+}
 
 /* USER CODE END PFP */
 
@@ -156,6 +242,8 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_USART3_UART_Init();
+  MX_TIM9_Init();
+  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
   HAL_Delay(100);
   clearScreen();
@@ -171,6 +259,7 @@ int main(void)
 	uint16_t distance2 = 0;
 	uint16_t distance3 = 0;
 	uint16_t distance4 = 0;
+
 
   ///*
   if(!SUMO_ENABLE)
@@ -198,66 +287,125 @@ int main(void)
 
   while (1)
   {
-	  distance1 = readLidar1();
+	  auto start1 = HAL_GetTick();
+	  distance1 = readLidar3();			//temporary switched lidar 1 and 3
+	  auto end1 = HAL_GetTick();
+	  auto start2 = HAL_GetTick();
 	  distance2 = readLidar2();
-	  distance3 = readLidar3();
+	  auto end2 = HAL_GetTick();
+	  auto start3 = HAL_GetTick();
+	  distance3 = readLidar1();        //temporary switched lidar 1 and 3
+	  auto end3 = HAL_GetTick();
+	  auto start4 = HAL_GetTick();
 	  distance4 = readLidar4();
+	  auto end4 = HAL_GetTick();
 
-	  uint32_t topLidarsThreshold = 400;
-	  uint32_t bottomLidarsThreshold = 200;
+	  uint32_t lidarsThreshold = 400;
 
-	  if(distance1 < topLidarsThreshold)
+	  if(distance1 < lidarsThreshold)
 	  {
-		  leftFrontLidar = true;
-	  }else leftFrontLidar=false;
-	  if(distance2 < topLidarsThreshold)
+		  rigthSideLidar = true;
+	  }else rigthSideLidar=false;
+	  if(distance2 < lidarsThreshold)
 	  {
 		  rigthFrontLidar = true;
 	  }else rigthFrontLidar=false;
 
-	  if(distance3 < bottomLidarsThreshold)
+	  if(distance3 < lidarsThreshold)
 	  {
-		  rigthSideLidar = true;
-	  }else rigthSideLidar=false;
-	  if(distance4 < bottomLidarsThreshold)
+		  leftFrontLidar = true;
+	  }else leftFrontLidar=false;
+	  if(distance4 < lidarsThreshold)
 	  {
 		  leftSideLidar = true;
 	  }else leftSideLidar=false;
 
-	  if(leftFrontLidar && rigthFrontLidar)
-	  {
-		  move_at_speed(100, RIGTH_MOTOR);
-		  move_at_speed(100, LEFT_MOTOR);
-	  }
-	  else if(leftFrontLidar && leftSideLidar)
-	  {
-		  move_at_speed(100, RIGTH_MOTOR);
-		  move_at_speed(0, LEFT_MOTOR);
-	  }
-	  else if(leftFrontLidar)
-	  {
-		  move_at_speed(75, RIGTH_MOTOR);
-		  move_at_speed(0, LEFT_MOTOR);
-	  }
-	  else if(rigthFrontLidar && rigthSideLidar)
-	  {
-		  move_at_speed(0, RIGTH_MOTOR);
-		  move_at_speed(100, LEFT_MOTOR);
-	  }
-	  else if(rigthFrontLidar)
-	  {
-		  move_at_speed(0, RIGTH_MOTOR);
-		  move_at_speed(75, LEFT_MOTOR);
-	  }
-	  else
-	  {
-		  move_at_speed(0, RIGTH_MOTOR);
-		  move_at_speed(0, LEFT_MOTOR);
-	  }
 
+	  if(!lineDetected){
+		  //move forward
+		  if(leftFrontLidar && rigthFrontLidar)
+		  {
+			  move_at_speed(forwardMaxSpeed, RIGTH_MOTOR);
+			  move_at_speed(forwardMaxSpeed, LEFT_MOTOR);
+		  }
+
+		  //turn right
+		  else if(leftFrontLidar && leftSideLidar)
+		  {
+			  move_at_speed(forwardMaxSpeed, RIGTH_MOTOR);
+			  move_at_speed(0, LEFT_MOTOR);
+		  }
+
+		  //turn left
+		  else if(rigthFrontLidar && rigthSideLidar)
+		  {
+			  move_at_speed(0, RIGTH_MOTOR);
+			  move_at_speed(forwardMaxSpeed, LEFT_MOTOR);
+		  }
+
+		  //side lidars detection (wide robot?) idk move forward
+		  else if(rigthSideLidar && leftSideLidar)
+		  {
+			  move_at_speed(forwardMaxSpeed, RIGTH_MOTOR);
+			  move_at_speed(forwardMaxSpeed, LEFT_MOTOR);
+		  }
+
+		  //turn right slightly
+		  else if(leftSideLidar)
+		  {
+			  move_at_speed(turnMinSpeed, RIGTH_MOTOR);
+			  move_at_speed(0, LEFT_MOTOR);
+		  }
+
+		  //turn right medium
+		  else if(leftFrontLidar)
+		  {
+			  move_at_speed(turnMediumSpeed, RIGTH_MOTOR);
+			  move_at_speed(0, LEFT_MOTOR);
+		  }
+
+		  //turn left slightly
+		  else if(rigthSideLidar)
+		  {
+			  move_at_speed(0, RIGTH_MOTOR);
+			  move_at_speed(turnMediumSpeed, LEFT_MOTOR);
+		  }
+		  //turn left medium
+		  else if(rigthFrontLidar)
+		  {
+			  move_at_speed(0, RIGTH_MOTOR);
+			  move_at_speed(turnMediumSpeed, LEFT_MOTOR);
+		  }
+		  else
+		  {
+			  if(SEARCH_ENABLED)SumoSearch();
+		  }
+		  HAL_TIM_Base_Start_IT(&htim9);
+	  }
 	  printf("Czujnik 1: %d mm, Czujnik 2: %d mm, Czujnik 3: %d mm, Czujnik 4: %d mm\n", distance1, distance2, distance3, distance4);
+	  if(!PRINTF_ENABLED)
+	  {
+		  PRINTF_ENABLED = true;
+		  printf("%dms %dms %dms %dms\n",end1-start1, end2-start2, end3-start3, end4-start4);
+		  PRINTF_ENABLED = false;
+	  }else printf("%dms %dms %dms %dms\n",end1-start1, end2-start2, end3-start3, end4-start4);
+	  //HAL_Delay(100);
 
-	  HAL_Delay(100);
+	  auto line2 = LineDetectorMessure(2);
+	  auto line3 = LineDetectorMessure(3);
+
+	  if(line2 < 500)lineDetected = true;
+	  else if (line3 < 500)lineDetected = true;
+	  else lineDetected = false;
+
+	  if(lineDetected)
+	  {
+		  move_at_speed(0, RIGTH_MOTOR);
+		  move_at_speed(0, LEFT_MOTOR);
+	  }
+
+	  printf("Line2: %d, Line3: %d\n",line2,line3);
+
 
     /* USER CODE END WHILE */
 
@@ -638,6 +786,44 @@ static void MX_TIM5_Init(void)
 }
 
 /**
+  * @brief TIM9 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM9_Init(void)
+{
+
+  /* USER CODE BEGIN TIM9_Init 0 */
+
+  /* USER CODE END TIM9_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+
+  /* USER CODE BEGIN TIM9_Init 1 */
+
+  /* USER CODE END TIM9_Init 1 */
+  htim9.Instance = TIM9;
+  htim9.Init.Prescaler = 48000-1;
+  htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim9.Init.Period = 85-1;
+  htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim9) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim9, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM9_Init 2 */
+
+  /* USER CODE END TIM9_Init 2 */
+
+}
+
+/**
   * @brief TIM12 Initialization Function
   * @param None
   * @retval None
@@ -690,6 +876,55 @@ static void MX_TIM12_Init(void)
 
   /* USER CODE END TIM12_Init 2 */
   HAL_TIM_MspPostInit(&htim12);
+
+}
+
+/**
+  * @brief TIM13 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM13_Init(void)
+{
+
+  /* USER CODE BEGIN TIM13_Init 0 */
+
+  /* USER CODE END TIM13_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM13_Init 1 */
+
+  /* USER CODE END TIM13_Init 1 */
+  htim13.Instance = TIM13;
+  htim13.Init.Prescaler = 48000-1;
+  htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim13.Init.Period = 1000-1;
+  htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim13) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim13) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OnePulse_Init(&htim13, TIM_OPMODE_SINGLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_OC_ConfigChannel(&htim13, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM13_Init 2 */
+
+  /* USER CODE END TIM13_Init 2 */
 
 }
 
@@ -777,13 +1012,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, DIR_MOT_2_R_Pin|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DIR_MOT_2_R_Pin|XSHUT_3_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, DIR_MOT_1_R_Pin|DIR_MOT_1_L_Pin|DIR_MOT_2_L_Pin|XSHUT_1_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(XSHUT_3_GPIO_Port, XSHUT_3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -791,8 +1026,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DIR_MOT_2_R_Pin XSHUT_2_Pin Sonic1_Echo_Pin */
-  GPIO_InitStruct.Pin = DIR_MOT_2_R_Pin|XSHUT_2_Pin|Sonic1_Echo_Pin;
+  /*Configure GPIO pins : DIR_MOT_2_R_Pin XSHUT_3_Pin */
+  GPIO_InitStruct.Pin = DIR_MOT_2_R_Pin|XSHUT_3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PC4 XSHUT_2_Pin Sonic1_Echo_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -810,13 +1052,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : XSHUT_3_Pin */
-  GPIO_InitStruct.Pin = XSHUT_3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(XSHUT_3_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);

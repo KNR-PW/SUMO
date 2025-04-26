@@ -71,8 +71,8 @@ void Error_Handler(void);
 #define USART_RX_GPIO_Port GPIOA
 #define ADC_Lin1_Pin GPIO_PIN_5
 #define ADC_Lin1_GPIO_Port GPIOA
-#define DIR_MOT_2_R_Pin GPIO_PIN_4
-#define DIR_MOT_2_R_GPIO_Port GPIOC
+#define DIR_MOT_2_R_Pin GPIO_PIN_6
+#define DIR_MOT_2_R_GPIO_Port GPIOA
 #define ADC_Lin3_Pin GPIO_PIN_5
 #define ADC_Lin3_GPIO_Port GPIOC
 #define PILOCIK_Pin GPIO_PIN_0

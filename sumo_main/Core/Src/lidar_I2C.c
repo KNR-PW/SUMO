@@ -48,17 +48,21 @@ void Lidar_initALL()
 
 void Lidar_init()
 {
+
 	if(!initVL53L0X(1, &hi2c1))
 	{
 		printf("Inizialization of lidar failed\n\r");
 		//while(1){;}
 	}
+
 	else{
+
+
 		printf("Lidar inizializated\n\r");
 
 		printf("Default\n\r");
-		printf("MeasurementTimingBudget ms: %d\n\r",getMeasurementTimingBudget());
-		printf("SignalRateLimit MCPS: %.2f\n\r",getSignalRateLimit());
+		//printf("MeasurementTimingBudget ms: %d\n\r",getMeasurementTimingBudget());
+		//printf("SignalRateLimit MCPS: %.2f\n\r",getSignalRateLimit());
 
 		setSignalRateLimit(200);
 		setVcselPulsePeriod(VcselPeriodPreRange, 10);   //was 10			//docunemtation values: 12-18
@@ -67,12 +71,13 @@ void Lidar_init()
 
 		printf("After inizialization\n\r");
 		printf("MeasurementTimingBudget ms: %d ,budget changed: %d\n\r",getMeasurementTimingBudget(),b_timingBudgetChanged);
-		printf("SignalRateLimit MCPS: %.2f\n\r",getSignalRateLimit());
+		//printf("SignalRateLimit MCPS: %.2f\n\r",getSignalRateLimit());
 
-		HAL_Delay(100);
+		HAL_Delay(10);
 		startContinuous(0);
 		//HAL_Delay(500);
 		printf("\n\r");
+
 	}
 }
 
@@ -80,21 +85,54 @@ uint16_t readLidar1()
 {
 	  *LidarAddr = VL53L0X_1_ADDR;
 	  //return readRangeSingleMillimeters(&distanceStr);
-	  return readRangeContinuousMillimeters(0);
+	  return readRangeContinuousMillimeters(0, 1);
 }
 
 uint16_t readLidar2()
 {
 	  *LidarAddr = VL53L0X_2_ADDR;
 	  //return readRangeSingleMillimeters(&distanceStr);
-	  return readRangeContinuousMillimeters(0);
+	  return readRangeContinuousMillimeters(0, 2);
 }
 
 uint16_t readLidar3()
 {
 	  *LidarAddr = VL53L0X_3_ADDR;
 	  //return readRangeSingleMillimeters(&distanceStr);
-	  return readRangeContinuousMillimeters(0);
+	  return readRangeContinuousMillimeters(0, 3);
+}
+
+void resetLidar1()
+{
+	HAL_GPIO_WritePin(XSHUT_1_GPIO_Port,XSHUT_1_Pin, 0);
+	*LidarAddr = 0b01010010;
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(XSHUT_1_GPIO_Port,XSHUT_1_Pin, 1);
+	Lidar_init();
+	setAddress_VL53L0X(VL53L0X_1_ADDR);
+	HAL_Delay(10);
+}
+
+void resetLidar2()
+{
+	HAL_GPIO_WritePin(XSHUT_2_GPIO_Port,XSHUT_2_Pin, 0);
+	*LidarAddr = 0b01010010;
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(XSHUT_2_GPIO_Port,XSHUT_2_Pin, 1);
+	Lidar_init();
+	setAddress_VL53L0X(VL53L0X_2_ADDR);
+	HAL_Delay(10);
+}
+
+void resetLidar3()
+{
+	HAL_GPIO_WritePin(XSHUT_3_GPIO_Port,XSHUT_3_Pin, 0);
+	*LidarAddr = 0b01010010;
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(XSHUT_3_GPIO_Port,XSHUT_3_Pin, 1);
+	Lidar_init();
+	setAddress_VL53L0X(VL53L0X_3_ADDR);
+	HAL_Delay(10);
 }
 
 
@@ -103,7 +141,7 @@ uint16_t readLidar3()
 //---------------------------------------------------------
 uint8_t g_i2cAddr = ADDRESS_DEFAULT;
 volatile uint8_t * LidarAddr = &g_i2cAddr;
-uint16_t g_ioTimeout = 100;  // no timeout
+uint16_t g_ioTimeout = 20;  // no timeout
 uint8_t g_isTimeout = 0;
 uint16_t g_timeoutStartMs;
 uint8_t g_stopVariable; // read by init and used when starting measurement; is StopVariable field of VL53L0X_DevData_t structure in API
@@ -112,9 +150,13 @@ uint32_t g_measTimBudUs;
 //my varaibles
 uint8_t tempBuf[12];
 extern I2C_HandleTypeDef hi2c1;
+int timeOutsCounter_LIDAR_1 = 0;
+int timeOutsCounter_LIDAR_2 = 0;
+int timeOutsCounter_LIDAR_3 = 0;
+int resetAfterThatMany = 100;
 
 
-#define I2C_TIMEOUT 100 // I2C timeout in ms
+#define I2C_TIMEOUT 20 // I2C timeout in ms
 #define I2C_READ 1
 #define I2C_WRITE 0
 I2C_HandleTypeDef VL53L0X_I2C_Handler; // I2C handler
@@ -304,6 +346,12 @@ bool initVL53L0X(bool io_2v8, I2C_HandleTypeDef *handler){
       spads_enabled++;
     }
   }
+	auto start = HAL_GetTick();
+
+
+
+
+
 
   writeMulti(GLOBAL_CONFIG_SPAD_ENABLES_REF_0, ref_spad_map, 6);
 
@@ -405,6 +453,9 @@ bool initVL53L0X(bool io_2v8, I2C_HandleTypeDef *handler){
   writeReg(0x00, 0x01);
   writeReg(0xFF, 0x00);
   writeReg(0x80, 0x00);
+
+	auto end = HAL_GetTick();
+	printf("Initialization time: %dms\n",end-start);
 
   // -- VL53L0X_load_tuning_settings() end
 
@@ -879,12 +930,16 @@ void stopContinuous(void)
 // (readRangeSingleMillimeters() also calls this function after starting a
 // single-shot range measurement)
 // extraStats provides additional info for this measurment. Set to 0 if not needed.
-uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats ) {
+uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats, int lidar_ID ) {
   uint8_t tempBuffer[12];
-  for(int i = 0; i < 12; i++)
+  if(extraStats != 0)
   {
-	  tempBuffer[i] = 0;
+	  for(int i = 0; i < 12; i++)
+	  {
+		  tempBuffer[i] = 0;
+	  }
   }
+
 
   uint16_t temp;
   startTimeout();
@@ -892,6 +947,44 @@ uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats ) {
     if (checkTimeoutExpired())
     {
       g_isTimeout = true;
+      if(lidar_ID == 1)
+      {
+    	  timeOutsCounter_LIDAR_1++;
+    	  if(timeOutsCounter_LIDAR_1 == resetAfterThatMany){
+			resetLidar1();
+			timeOutsCounter_LIDAR_1 = 0;
+    	  }
+      }
+      if(lidar_ID == 2)
+      {
+    	  timeOutsCounter_LIDAR_2++;
+    	  if(timeOutsCounter_LIDAR_2 == resetAfterThatMany){
+			resetLidar2();
+			timeOutsCounter_LIDAR_2 = 0;
+    	  }
+      }
+      if(lidar_ID == 3)
+      {
+    	  timeOutsCounter_LIDAR_3++;
+    	  if(timeOutsCounter_LIDAR_3 == resetAfterThatMany){
+			resetLidar3();
+			timeOutsCounter_LIDAR_3 = 0;
+    	  }
+      }
+
+	  startTimeout();
+	  while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) == 0) {
+		  if (checkTimeoutExpired())
+		  {
+			g_isTimeout = true;
+			return 65535;
+		  }
+		  else temp = readReg16Bit(RESULT_RANGE_STATUS + 10);
+		  return temp;
+	  }
+
+
+
       return 65535;
     }
   }
@@ -944,7 +1037,7 @@ uint16_t readRangeSingleMillimeters( statInfo_t_VL53L0X *extraStats ) {
       return 65535;
     }
   }
-  return readRangeContinuousMillimeters( extraStats );
+  return readRangeContinuousMillimeters(extraStats, 0 );
 }
 
 // Did a timeout occur in one of the read functions since the last call to

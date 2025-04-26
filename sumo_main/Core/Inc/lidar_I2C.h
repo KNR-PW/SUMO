@@ -8,6 +8,7 @@
 #define VL53L0X_2_ADDR 0x70
 #define VL53L0X_3_ADDR 0x50
 
+
 //original part form here
 //------------------------------------------------------------
 // For quick and dirty C++ compatibility
@@ -39,6 +40,10 @@ void Lidar_init();
 uint16_t readLidar1();
 uint16_t readLidar2();
 uint16_t readLidar3();
+
+void resetLidar1();
+void resetLidar2();
+void resetLidar3();
 
 //the original part form here
 //------------------------------------------------------------
@@ -223,7 +228,7 @@ void stopContinuous(void);
 
 // Returns a range reading in millimeters when continuous mode is active.
 // Additional measurement data will be copied into `extraStats` if it is non-zero.
-uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats );
+uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats , int lidar_ID);
 
 // Performs a single-shot ranging measurement and returns the reading in millimeters.
 // Additional measurement data will be copied into `extraStats` if it is non-zero.
