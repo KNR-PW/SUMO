@@ -60,7 +60,6 @@ ADC_HandleTypeDef hadc1;
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim9;
@@ -79,6 +78,9 @@ bool PRINTF_ENABLED = false;
 
 //while true robot start moving slowly forward and making small truns to find enemy robot
 bool SEARCH_ENABLED = false;
+
+//while true robot can move
+bool MOTORS_ENABLE = true;
 
 //the status of lidar detection if true than lidar is detecting some object
 bool leftSideLidar = false;
@@ -112,7 +114,6 @@ static void MX_TIM5_Init(void);
 static void MX_TIM12_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM9_Init(void);
 static void MX_TIM13_Init(void);
@@ -240,7 +241,6 @@ int main(void)
   MX_TIM12_Init();
   MX_USART2_UART_Init();
   MX_TIM1_Init();
-  MX_TIM2_Init();
   MX_USART3_UART_Init();
   MX_TIM9_Init();
   MX_TIM13_Init();
@@ -260,15 +260,8 @@ int main(void)
 	uint16_t distance3 = 0;
 	uint16_t distance4 = 0;
 
-
-  ///*
-  if(!SUMO_ENABLE)
-  {
-	  printf("Waiting for start signal\n\r");
-	  while(!SUMO_ENABLE){;}
-	  printf("Sumo enabled\n\r");
-  }//*/
-
+  //enables timer that will be used for IR sensor to turn on and off robot
+  HAL_TIM_OnePulse_Start_IT(&htim13, TIM_CHANNEL_ALL);
 
   HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
@@ -287,6 +280,14 @@ int main(void)
 
   while (1)
   {
+	  ///*
+	  if(!SUMO_ENABLE)
+	  {
+		  printf("Waiting for start signal\n\r");
+		  while(!SUMO_ENABLE){;}
+		  printf("Sumo enabled\n\r");
+	  }//*/
+
 	  auto start1 = HAL_GetTick();
 	  distance1 = readLidar3();			//temporary switched lidar 1 and 3
 	  auto end1 = HAL_GetTick();
@@ -626,68 +627,6 @@ static void MX_TIM1_Init(void)
 }
 
 /**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_IC_InitTypeDef sConfigIC = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_IC_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-  if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-  HAL_TIM_MspPostInit(&htim2);
-
-}
-
-/**
   * @brief TIM3 Initialization Function
   * @param None
   * @retval None
@@ -897,9 +836,9 @@ static void MX_TIM13_Init(void)
 
   /* USER CODE END TIM13_Init 1 */
   htim13.Instance = TIM13;
-  htim13.Init.Prescaler = 48000-1;
+  htim13.Init.Prescaler = 1000-1;
   htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim13.Init.Period = 1000-1;
+  htim13.Init.Period = 48000-1;
   htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim13) != HAL_OK)
@@ -1051,6 +990,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB10 PB3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/

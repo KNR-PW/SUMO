@@ -932,6 +932,7 @@ void stopContinuous(void)
 // extraStats provides additional info for this measurment. Set to 0 if not needed.
 uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats, int lidar_ID ) {
   uint8_t tempBuffer[12];
+  auto start = HAL_GetTick();
   if(extraStats != 0)
   {
 	  for(int i = 0; i < 12; i++)
@@ -942,8 +943,19 @@ uint16_t readRangeContinuousMillimeters( statInfo_t_VL53L0X *extraStats, int lid
 
 
   uint16_t temp;
+
+
   startTimeout();
   while ((readReg(RESULT_INTERRUPT_STATUS) & 0x07) == 0) {
+
+	  auto end = HAL_GetTick();
+	  extern bool PRINTF_ENABLED;
+	  if(!PRINTF_ENABLED)
+	  {
+		  PRINTF_ENABLED = true;
+		  printf("time: %dms\n",end - start);
+		  PRINTF_ENABLED = false;
+	  }
     if (checkTimeoutExpired())
     {
       g_isTimeout = true;

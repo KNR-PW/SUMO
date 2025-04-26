@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+extern int __io_putchar(int ch);
 extern bool SUMO_ENABLE;
 extern TIM_HandleTypeDef htim9;
 extern TIM_HandleTypeDef htim13;
@@ -45,7 +46,7 @@ extern TIM_HandleTypeDef htim13;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+int IR_detectionCounter = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,6 +62,7 @@ extern TIM_HandleTypeDef htim13;
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim9;
+extern TIM_HandleTypeDef htim13;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -209,21 +211,16 @@ void SysTick_Handler(void)
 void EXTI0_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI0_IRQn 0 */
-  //so the was no signal form IR sensor lately
-  if(TIM13 -> CNT == 0)
+  IR_detectionCounter++;
+
+  //start the one pulse timer that will reset IR counter
+  __HAL_TIM_ENABLE(&htim13);
+  if((36 > IR_detectionCounter) && (IR_detectionCounter > 14))
   {
 	  SUMO_ENABLE = !SUMO_ENABLE;
-	  HAL_TIM_OnePulse_Start(&htim13, TIM_CHANNEL_ALL);
-	  __HAL_TIM_ENABLE(&htim13);
 
-	  extern bool PRINTF_ENABLED;
-	  if(!PRINTF_ENABLED)
-	  {
-		  PRINTF_ENABLED = true;
-		  printf("\nStarting signal detected\n\n");
-		  printf("	%d",TIM13->CNT);
-		  PRINTF_ENABLED = false;
-	  }
+	  //eliminates debouncing efect - the sensor will wait now for timer to reset the counter
+	  IR_detectionCounter += 30;
   }
 
   /* USER CODE END EXTI0_IRQn 0 */
@@ -243,8 +240,6 @@ void TIM1_BRK_TIM9_IRQHandler(void)
 	  TIM9->CNT = 0;
 	  __HAL_TIM_CLEAR_IT(&htim9, TIM_IT_UPDATE); // ← IMPORTANT!
 
-	  printf("One sec\n");
-
 	  move_at_speed(0, RIGTH_MOTOR);
 	  move_at_speed(0, LEFT_MOTOR);
   /* USER CODE END TIM1_BRK_TIM9_IRQn 0 */
@@ -253,6 +248,21 @@ void TIM1_BRK_TIM9_IRQHandler(void)
   /* USER CODE BEGIN TIM1_BRK_TIM9_IRQn 1 */
 
   /* USER CODE END TIM1_BRK_TIM9_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM8 update interrupt and TIM13 global interrupt.
+  */
+void TIM8_UP_TIM13_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM8_UP_TIM13_IRQn 0 */
+  IR_detectionCounter = 0;
+
+  /* USER CODE END TIM8_UP_TIM13_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim13);
+  /* USER CODE BEGIN TIM8_UP_TIM13_IRQn 1 */
+
+  /* USER CODE END TIM8_UP_TIM13_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
