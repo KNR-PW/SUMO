@@ -78,7 +78,7 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 //this value if false makes program stucks inside while(1) loop thats makes nothing
-bool SUMO_ENABLE = false;
+bool SUMO_ENABLE = true;
 
 //while true all printf commands wont work - its for saving time
 bool PRINTF_ENABLED = false;
@@ -228,7 +228,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -294,6 +294,22 @@ int main(void)
   	  }//*/
 
   bool firstDetection = false;
+
+  while(1)
+  {
+	  move_at_speed(forwardMaxSpeed, RIGTH_MOTOR);
+	  HAL_Delay(1000);
+	  change_direction(RIGTH_MOTOR);
+	  HAL_Delay(1000);
+	  move_at_speed(0, RIGTH_MOTOR);
+	  HAL_Delay(1000);
+	  move_at_speed(forwardMaxSpeed, LEFT_MOTOR);
+	  HAL_Delay(1000);
+	  change_direction(LEFT_MOTOR);
+	  HAL_Delay(1000);
+	  move_at_speed(0, LEFT_MOTOR);
+	  HAL_Delay(1000);
+}
 
   while(!firstDetection)
   {
@@ -1015,10 +1031,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, DIR_MOT_2_R_Pin|XSHUT_3_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, WRONG_PIN_Pin|XSHUT_3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, DIR_MOT_2_R_Pin|XSHUT_2_Pin|Sonic1_Echo_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, DIR_MOT_1_R_Pin|DIR_MOT_1_L_Pin|DIR_MOT_2_L_Pin|XSHUT_1_Pin, GPIO_PIN_RESET);
@@ -1029,15 +1045,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DIR_MOT_2_R_Pin XSHUT_3_Pin */
-  GPIO_InitStruct.Pin = DIR_MOT_2_R_Pin|XSHUT_3_Pin;
+  /*Configure GPIO pins : WRONG_PIN_Pin XSHUT_3_Pin */
+  GPIO_InitStruct.Pin = WRONG_PIN_Pin|XSHUT_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC4 XSHUT_2_Pin Sonic1_Echo_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|XSHUT_2_Pin|Sonic1_Echo_Pin;
+  /*Configure GPIO pins : DIR_MOT_2_R_Pin XSHUT_2_Pin Sonic1_Echo_Pin */
+  GPIO_InitStruct.Pin = DIR_MOT_2_R_Pin|XSHUT_2_Pin|Sonic1_Echo_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
